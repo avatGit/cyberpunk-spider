@@ -1,0 +1,165 @@
+{
+  "name": "cyberpunk-spider",
+  "displayName": "Cyberpunk Spider",
+  "description": "Une araignée cyberpunk néon (cinématique inverse) qui se promène sur tout VS Code, chasse vos bugs et tisse sa toile quand vous êtes inactif.",
+  "version": "0.1.0",
+  "publisher": "your-publisher-id",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-github/cyberpunk-spider.git"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Themes",
+    "Visualization",
+    "Other"
+  ],
+  "keywords": [
+    "spider",
+    "cyberpunk",
+    "neon",
+    "animation",
+    "fun",
+    "spider-verse"
+  ],
+  "icon": "images/icon.png",
+  "galleryBanner": {
+    "color": "#0a0a1a",
+    "theme": "dark"
+  },
+  "main": "./dist/extension.js",
+  "extensionKind": [
+    "ui"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true
+    },
+    "virtualWorkspaces": true
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "cyberpunkSpider.enable",
+        "title": "Installer / réappliquer l'araignée",
+        "category": "Cyberpunk Spider"
+      },
+      {
+        "command": "cyberpunkSpider.disable",
+        "title": "Désinstaller l'araignée (restaurer VS Code)",
+        "category": "Cyberpunk Spider"
+      },
+      {
+        "command": "cyberpunkSpider.toggle",
+        "title": "Activer / désactiver rapidement",
+        "category": "Cyberpunk Spider"
+      },
+      {
+        "command": "cyberpunkSpider.openSettings",
+        "title": "Ouvrir les réglages",
+        "category": "Cyberpunk Spider"
+      }
+    ],
+    "configuration": {
+      "title": "Cyberpunk Spider",
+      "properties": {
+        "cyberpunkSpider.enabled": {
+          "type": "boolean",
+          "default": true,
+          "scope": "application",
+          "description": "Affiche l'araignée (sans rechargement)."
+        },
+        "cyberpunkSpider.speed": {
+          "type": "number",
+          "default": 1,
+          "minimum": 0.3,
+          "maximum": 3,
+          "scope": "application",
+          "description": "Multiplicateur de vitesse de déplacement."
+        },
+        "cyberpunkSpider.size": {
+          "type": "number",
+          "default": 1,
+          "minimum": 0.5,
+          "maximum": 2.5,
+          "scope": "application",
+          "description": "Taille de l'araignée."
+        },
+        "cyberpunkSpider.glow": {
+          "type": "number",
+          "default": 0.8,
+          "minimum": 0,
+          "maximum": 1,
+          "scope": "application",
+          "description": "Intensité de la lueur néon."
+        },
+        "cyberpunkSpider.idleSeconds": {
+          "type": "number",
+          "default": 60,
+          "minimum": 10,
+          "maximum": 3600,
+          "scope": "application",
+          "description": "Secondes sans frappe avant que l'araignée tisse sa toile."
+        },
+        "cyberpunkSpider.palette": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          },
+          "default": [
+            "#39ff14",
+            "#b026ff",
+            "#00f0ff",
+            "#ff2bd6"
+          ],
+          "scope": "application",
+          "description": "Couleurs néon (hex) parcourues par l'araignée."
+        },
+        "cyberpunkSpider.favoritePalettes": {
+          "type": "array",
+          "default": [],
+          "scope": "application",
+          "description": "Palettes favorites enregistrées depuis le panneau de réglages."
+        },
+        "cyberpunkSpider.huntBugs": {
+          "type": "boolean",
+          "default": true,
+          "scope": "application",
+          "description": "L'araignée va inspecter les erreurs visibles dans l'éditeur."
+        },
+        "cyberpunkSpider.silkTrail": {
+          "type": "boolean",
+          "default": true,
+          "scope": "application",
+          "description": "Laisse de fins fils de soie éphémères derrière elle."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "vscode:uninstall": "node ./dist/uninstall.js",
+    "build": "node esbuild.js --production",
+    "build:dev": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "package": "vsce package --no-dependencies",
+    "publish:vsce": "vsce publish --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "1.85.0",
+    "@vscode/vsce": "^3.0.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.1.0"
+  }
+}
