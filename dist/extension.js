@@ -1,13 +1,331 @@
-"use strict";var K=Object.create;var b=Object.defineProperty;var G=Object.getOwnPropertyDescriptor;var V=Object.getOwnPropertyNames;var U=Object.getPrototypeOf,q=Object.prototype.hasOwnProperty;var H=(t,e)=>{for(var n in e)b(t,n,{get:e[n],enumerable:!0})},A=(t,e,n,o)=>{if(e&&typeof e=="object"||typeof e=="function")for(let s of V(e))!q.call(t,s)&&s!==n&&b(t,s,{get:()=>e[s],enumerable:!(o=G(e,s))||o.enumerable});return t};var v=(t,e,n)=>(n=t!=null?K(U(t)):{},A(e||!t||!t.__esModule?b(n,"default",{value:t,enumerable:!0}):n,t)),W=t=>A(b({},"__esModule",{value:!0}),t);var ce={};H(ce,{activate:()=>se,deactivate:()=>le});module.exports=W(ce);var a=v(require("vscode")),O=v(require("path"));var r=v(require("fs")),d=v(require("path")),z=v(require("crypto"));var P={"Spider-Verse":["#39ff14","#b026ff","#00f0ff","#ff2bd6"],"Neon Tokyo":["#ff2bd6","#00f0ff","#fff200"],Matrix:["#00ff41","#00b82e","#b8ffcb"],Synthwave:["#ff6ec7","#7a5cff","#00e5ff"],Miles:["#ff1e3c","#00f0ff","#ffffff"]},f={enabled:!0,speed:1,size:1,glow:.8,idleSeconds:60,palette:P["Spider-Verse"],huntBugs:!0,silkTrail:!0},m="cyberpunk-spider.js",y="cyberpunk-spider.config.js",$="cyberpunk-spider.config.json",B="__CYBERPUNK_SPIDER_CONFIG__",Y=/^#[0-9a-f]{6}$/i;function w(t,e,n,o){return typeof t=="number"&&Number.isFinite(t)?Math.min(n,Math.max(e,t)):o}function E(t,e){return typeof t=="boolean"?t:e}function L(t){let e=t??{},n=Array.isArray(e.palette)?e.palette.filter(o=>typeof o=="string"&&Y.test(o)).slice(0,8):[];return{enabled:E(e.enabled,f.enabled),speed:w(e.speed,.3,3,f.speed),size:w(e.size,.5,2.5,f.size),glow:w(e.glow,0,1,f.glow),idleSeconds:w(e.idleSeconds,10,3600,f.idleSeconds),palette:n.length?n:[...f.palette],huntBugs:E(e.huntBugs,f.huntBugs),silkTrail:E(e.silkTrail,f.silkTrail)}}var F="<!-- CYBERPUNK-SPIDER-START -->",D="<!-- CYBERPUNK-SPIDER-END -->",I=t=>t.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"),J=new RegExp(`${I(F)}[\\s\\S]*?${I(D)}\\n?`,"g");function X(){return`${F}
-<script src="${y}"></script>
-<script src="${m}"></script>
-${D}
-`}function T(t){return t.includes(F)}function j(t){return t.replace(J,"")}function Q(t){let e=j(t),n=e.lastIndexOf("</body>");if(n<0&&(n=e.lastIndexOf("</html>")),n<0)throw new Error("workbench.html : balise </body> ou </html> introuvable.");return e.slice(0,n)+X()+e.slice(n)}function Z(t){return z.createHash("sha256").update(t).digest("base64").replace(/=+$/,"")}function ee(t,e,n){let o=new RegExp(`("${I(e)}"\\s*:\\s*")[^"]*(")`);return o.test(t)?t.replace(o,`$1${n}$2`):null}function te(t){return`window.${B}=${JSON.stringify(t)};
-`}var ne=["vs/code/electron-sandbox/workbench/workbench.html","vs/code/electron-sandbox/workbench/workbench.esm.html","vs/code/electron-browser/workbench/workbench.html"];function oe(t){let e=[];for(let n of ne){let o=d.join(t,"out",...n.split("/"));r.existsSync(o)&&e.push({html:o,dir:d.dirname(o),checksumKey:n,product:d.join(t,"product.json")})}if(!e.length)throw new Error(`workbench.html introuvable sous ${t}. Version de VS Code non support\xE9e ?`);return e}var x=class{constructor(e,n){this.appRoot=e;this.injectedSrc=n}targets(){return oe(this.appRoot)}isInstalled(){try{return this.targets().every(e=>T(r.readFileSync(e.html,"utf8"))&&r.existsSync(d.join(e.dir,m)))}catch{return!1}}isUpToDate(){try{let e=r.readFileSync(this.injectedSrc);return this.targets().every(n=>r.readFileSync(d.join(n.dir,m)).equals(e))}catch{return!1}}writeConfig(e){for(let n of this.targets())this.writeConfigIn(n,e)}writeConfigIn(e,n){r.writeFileSync(d.join(e.dir,y),te(n),"utf8"),r.writeFileSync(d.join(e.dir,$),JSON.stringify(n),"utf8")}install(e){let n=this.targets();for(let s of n)r.accessSync(s.html,r.constants.W_OK);let o=!0;for(let s of n){let p=r.readFileSync(s.html,"utf8");T(p)||r.copyFileSync(s.html,s.html+".cyberpunk-spider.bak"),r.copyFileSync(this.injectedSrc,d.join(s.dir,m)),this.writeConfigIn(s,e),r.writeFileSync(s.html,Q(p),"utf8"),o=this.syncChecksum(s)&&o}return{checksumUpdated:o}}uninstall(){for(let e of this.targets()){let n=r.readFileSync(e.html,"utf8");T(n)&&r.writeFileSync(e.html,j(n),"utf8"),this.syncChecksum(e);for(let o of[m,y,$])try{r.unlinkSync(d.join(e.dir,o))}catch{}}}syncChecksum(e){try{let n=r.readFileSync(e.product,"utf8"),o=ee(n,e.checksumKey,Z(r.readFileSync(e.html)));return o===null?!1:(o!==n&&r.writeFileSync(e.product,o,"utf8"),!0)}catch{return!1}}};var R=v(require("vscode"));var g="cyberpunkSpider";function h(){let t=R.workspace.getConfiguration(g);return L({enabled:t.get("enabled"),speed:t.get("speed"),size:t.get("size"),glow:t.get("glow"),idleSeconds:t.get("idleSeconds"),palette:t.get("palette"),huntBugs:t.get("huntBugs"),silkTrail:t.get("silkTrail")})}function k(){let t=R.workspace.getConfiguration(g).get("favoritePalettes");return Array.isArray(t)?t.filter(e=>!!e&&typeof e.name=="string"&&Array.isArray(e.colors)):[]}var c=v(require("vscode"));var re=new Set(["enabled","speed","size","glow","idleSeconds","palette","huntBugs","silkTrail"]),S;function M(t,e){if(S){S.reveal();return}let n=c.window.createWebviewPanel("cyberpunkSpiderSettings","Cyberpunk Spider \u2014 R\xE9glages",c.ViewColumn.Active,{enableScripts:!0});S=n;let o=()=>n.webview.postMessage({type:"state",config:h(),favorites:k(),presets:P,installed:e.isInstalled()});n.webview.html=ae();let s=()=>c.workspace.getConfiguration(g),p=[c.workspace.onDidChangeConfiguration(l=>{l.affectsConfiguration(g)&&o()}),n.webview.onDidReceiveMessage(async l=>{try{switch(l?.type){case"ready":o();break;case"set":re.has(l.key)&&await s().update(l.key,l.value,c.ConfigurationTarget.Global);break;case"saveFavorite":{let i=String(l.name??"").trim().slice(0,40);if(!i||!Array.isArray(l.colors))break;let u=k().filter(_=>_.name!==i);u.push({name:i,colors:l.colors}),await s().update("favoritePalettes",u,c.ConfigurationTarget.Global);break}case"deleteFavorite":{let i=k().filter(u=>u.name!==l.name);await s().update("favoritePalettes",i,c.ConfigurationTarget.Global);break}case"install":await e.install(),o();break;case"uninstall":await e.uninstall(),o();break;case"reload":e.reload();break}}catch(i){c.window.showErrorMessage(`Cyberpunk Spider : ${i.message}`)}})];n.onDidDispose(()=>{S=void 0,p.forEach(l=>l.dispose())}),t.subscriptions.push(n)}function ie(){let t="abcdefghijklmnopqrstuvwxyz0123456789",e="";for(let n=0;n<24;n++)e+=t[Math.floor(Math.random()*t.length)];return e}function ae(){let t=ie();return`<!DOCTYPE html>
+"use strict";
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+  // If the importer is in node compatibility mode or this is not an ESM
+  // file that has been converted to a CommonJS file using a Babel-
+  // compatible transform (i.e. "__esModule" has not been set), then set
+  // "default" to the CommonJS "module.exports" for node compatibility.
+  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+  mod
+));
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+
+// src/extension/extension.ts
+var extension_exports = {};
+__export(extension_exports, {
+  activate: () => activate,
+  deactivate: () => deactivate
+});
+module.exports = __toCommonJS(extension_exports);
+var vscode3 = __toESM(require("vscode"));
+var path2 = __toESM(require("path"));
+
+// src/extension/patcher.ts
+var fs = __toESM(require("fs"));
+var path = __toESM(require("path"));
+var crypto = __toESM(require("crypto"));
+
+// src/shared/types.ts
+var PRESETS = {
+  "Spider-Verse": ["#39ff14", "#b026ff", "#00f0ff", "#ff2bd6"],
+  "Neon Tokyo": ["#ff2bd6", "#00f0ff", "#fff200"],
+  Matrix: ["#00ff41", "#00b82e", "#b8ffcb"],
+  Synthwave: ["#ff6ec7", "#7a5cff", "#00e5ff"],
+  Miles: ["#ff1e3c", "#00f0ff", "#ffffff"]
+};
+var DEFAULT_CONFIG = {
+  enabled: true,
+  speed: 1,
+  size: 1,
+  glow: 0.8,
+  idleSeconds: 60,
+  palette: PRESETS["Spider-Verse"],
+  huntBugs: true,
+  silkTrail: true
+};
+var ASSET_SCRIPT = "cyberpunk-spider.js";
+var ASSET_CONFIG = "cyberpunk-spider.config.js";
+var ASSET_CONFIG_JSON = "cyberpunk-spider.config.json";
+var CONFIG_GLOBAL = "__CYBERPUNK_SPIDER_CONFIG__";
+var HEX = /^#[0-9a-f]{6}$/i;
+function num(v, min, max, fallback) {
+  return typeof v === "number" && Number.isFinite(v) ? Math.min(max, Math.max(min, v)) : fallback;
+}
+function bool(v, fallback) {
+  return typeof v === "boolean" ? v : fallback;
+}
+function sanitizeConfig(raw) {
+  const r = raw ?? {};
+  const palette = Array.isArray(r.palette) ? r.palette.filter((c) => typeof c === "string" && HEX.test(c)).slice(0, 8) : [];
+  return {
+    enabled: bool(r.enabled, DEFAULT_CONFIG.enabled),
+    speed: num(r.speed, 0.3, 3, DEFAULT_CONFIG.speed),
+    size: num(r.size, 0.5, 2.5, DEFAULT_CONFIG.size),
+    glow: num(r.glow, 0, 1, DEFAULT_CONFIG.glow),
+    idleSeconds: num(r.idleSeconds, 10, 3600, DEFAULT_CONFIG.idleSeconds),
+    palette: palette.length ? palette : [...DEFAULT_CONFIG.palette],
+    huntBugs: bool(r.huntBugs, DEFAULT_CONFIG.huntBugs),
+    silkTrail: bool(r.silkTrail, DEFAULT_CONFIG.silkTrail)
+  };
+}
+
+// src/extension/patcher.ts
+var MARK_START = "<!-- CYBERPUNK-SPIDER-START -->";
+var MARK_END = "<!-- CYBERPUNK-SPIDER-END -->";
+var esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+var BLOCK_RE = new RegExp(`${esc(MARK_START)}[\\s\\S]*?${esc(MARK_END)}\\n?`, "g");
+function buildBlock() {
+  return `${MARK_START}
+<script src="${ASSET_CONFIG}"></script>
+<script src="${ASSET_SCRIPT}"></script>
+${MARK_END}
+`;
+}
+function hasBlock(html) {
+  return html.includes(MARK_START);
+}
+function removeBlock(html) {
+  return html.replace(BLOCK_RE, "");
+}
+function injectBlock(html) {
+  const clean = removeBlock(html);
+  let i = clean.lastIndexOf("</body>");
+  if (i < 0) i = clean.lastIndexOf("</html>");
+  if (i < 0) throw new Error("workbench.html : balise </body> ou </html> introuvable.");
+  return clean.slice(0, i) + buildBlock() + clean.slice(i);
+}
+function computeChecksum(content) {
+  return crypto.createHash("sha256").update(content).digest("base64").replace(/=+$/, "");
+}
+function replaceChecksum(productRaw, key, newHash) {
+  const re = new RegExp(`("${esc(key)}"\\s*:\\s*")[^"]*(")`);
+  if (!re.test(productRaw)) return null;
+  return productRaw.replace(re, `$1${newHash}$2`);
+}
+function configFileContent(cfg) {
+  return `window.${CONFIG_GLOBAL}=${JSON.stringify(cfg)};
+`;
+}
+var HTML_CANDIDATES = [
+  "vs/code/electron-sandbox/workbench/workbench.html",
+  "vs/code/electron-sandbox/workbench/workbench.esm.html",
+  "vs/code/electron-browser/workbench/workbench.html"
+];
+function locateAll(appRoot) {
+  const found = [];
+  for (const rel of HTML_CANDIDATES) {
+    const html = path.join(appRoot, "out", ...rel.split("/"));
+    if (fs.existsSync(html)) {
+      found.push({ html, dir: path.dirname(html), checksumKey: rel, product: path.join(appRoot, "product.json") });
+    }
+  }
+  if (!found.length) {
+    throw new Error(`workbench.html introuvable sous ${appRoot}. Version de VS Code non support\xE9e ?`);
+  }
+  return found;
+}
+var Patcher = class {
+  /** `injectedSrc` : chemin du bundle dist/injected.js (vide pour une simple désinstallation). */
+  constructor(appRoot, injectedSrc) {
+    this.appRoot = appRoot;
+    this.injectedSrc = injectedSrc;
+  }
+  targets() {
+    return locateAll(this.appRoot);
+  }
+  isInstalled() {
+    try {
+      return this.targets().every(
+        (p) => hasBlock(fs.readFileSync(p.html, "utf8")) && fs.existsSync(path.join(p.dir, ASSET_SCRIPT))
+      );
+    } catch {
+      return false;
+    }
+  }
+  /** Le script déposé correspond-il à celui de l'extension installée ? */
+  isUpToDate() {
+    try {
+      const src = fs.readFileSync(this.injectedSrc);
+      return this.targets().every((p) => fs.readFileSync(path.join(p.dir, ASSET_SCRIPT)).equals(src));
+    } catch {
+      return false;
+    }
+  }
+  writeConfig(cfg) {
+    for (const p of this.targets()) this.writeConfigIn(p, cfg);
+  }
+  writeConfigIn(p, cfg) {
+    fs.writeFileSync(path.join(p.dir, ASSET_CONFIG), configFileContent(cfg), "utf8");
+    fs.writeFileSync(path.join(p.dir, ASSET_CONFIG_JSON), JSON.stringify(cfg), "utf8");
+  }
+  install(cfg) {
+    const targets = this.targets();
+    for (const p of targets) fs.accessSync(p.html, fs.constants.W_OK);
+    let allSynced = true;
+    for (const p of targets) {
+      const original = fs.readFileSync(p.html, "utf8");
+      if (!hasBlock(original)) fs.copyFileSync(p.html, p.html + ".cyberpunk-spider.bak");
+      fs.copyFileSync(this.injectedSrc, path.join(p.dir, ASSET_SCRIPT));
+      this.writeConfigIn(p, cfg);
+      fs.writeFileSync(p.html, injectBlock(original), "utf8");
+      allSynced = this.syncChecksum(p) && allSynced;
+    }
+    return { checksumUpdated: allSynced };
+  }
+  uninstall() {
+    for (const p of this.targets()) {
+      const html = fs.readFileSync(p.html, "utf8");
+      if (hasBlock(html)) fs.writeFileSync(p.html, removeBlock(html), "utf8");
+      this.syncChecksum(p);
+      for (const f of [ASSET_SCRIPT, ASSET_CONFIG, ASSET_CONFIG_JSON]) {
+        try {
+          fs.unlinkSync(path.join(p.dir, f));
+        } catch {
+        }
+      }
+    }
+  }
+  /** Recalcule le checksum de workbench.html dans product.json pour éviter l'alerte « installation corrompue ». */
+  syncChecksum(p) {
+    try {
+      const raw = fs.readFileSync(p.product, "utf8");
+      const next = replaceChecksum(raw, p.checksumKey, computeChecksum(fs.readFileSync(p.html)));
+      if (next === null) return false;
+      if (next !== raw) fs.writeFileSync(p.product, next, "utf8");
+      return true;
+    } catch {
+      return false;
+    }
+  }
+};
+
+// src/extension/config.ts
+var vscode = __toESM(require("vscode"));
+var SECTION = "cyberpunkSpider";
+function readConfig() {
+  const c = vscode.workspace.getConfiguration(SECTION);
+  return sanitizeConfig({
+    enabled: c.get("enabled"),
+    speed: c.get("speed"),
+    size: c.get("size"),
+    glow: c.get("glow"),
+    idleSeconds: c.get("idleSeconds"),
+    palette: c.get("palette"),
+    huntBugs: c.get("huntBugs"),
+    silkTrail: c.get("silkTrail")
+  });
+}
+function readFavorites() {
+  const raw = vscode.workspace.getConfiguration(SECTION).get("favoritePalettes");
+  if (!Array.isArray(raw)) return [];
+  return raw.filter(
+    (f) => !!f && typeof f.name === "string" && Array.isArray(f.colors)
+  );
+}
+
+// src/extension/settingsPanel.ts
+var vscode2 = __toESM(require("vscode"));
+var ALLOWED_KEYS = /* @__PURE__ */ new Set(["enabled", "speed", "size", "glow", "idleSeconds", "palette", "huntBugs", "silkTrail"]);
+var current;
+function openSettingsPanel(context, actions) {
+  if (current) {
+    current.reveal();
+    return;
+  }
+  const panel = vscode2.window.createWebviewPanel("cyberpunkSpiderSettings", "Cyberpunk Spider \u2014 R\xE9glages", vscode2.ViewColumn.Active, {
+    enableScripts: true
+  });
+  current = panel;
+  const post = () => panel.webview.postMessage({
+    type: "state",
+    config: readConfig(),
+    favorites: readFavorites(),
+    presets: PRESETS,
+    installed: actions.isInstalled()
+  });
+  panel.webview.html = getHtml();
+  const cfg = () => vscode2.workspace.getConfiguration(SECTION);
+  const subs = [
+    vscode2.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration(SECTION)) post();
+    }),
+    panel.webview.onDidReceiveMessage(async (m) => {
+      try {
+        switch (m?.type) {
+          case "ready":
+            post();
+            break;
+          case "set":
+            if (ALLOWED_KEYS.has(m.key)) await cfg().update(m.key, m.value, vscode2.ConfigurationTarget.Global);
+            break;
+          case "saveFavorite": {
+            const name = String(m.name ?? "").trim().slice(0, 40);
+            if (!name || !Array.isArray(m.colors)) break;
+            const favs = readFavorites().filter((f) => f.name !== name);
+            favs.push({ name, colors: m.colors });
+            await cfg().update("favoritePalettes", favs, vscode2.ConfigurationTarget.Global);
+            break;
+          }
+          case "deleteFavorite": {
+            const favs = readFavorites().filter((f) => f.name !== m.name);
+            await cfg().update("favoritePalettes", favs, vscode2.ConfigurationTarget.Global);
+            break;
+          }
+          case "install":
+            await actions.install();
+            post();
+            break;
+          case "uninstall":
+            await actions.uninstall();
+            post();
+            break;
+          case "reload":
+            actions.reload();
+            break;
+        }
+      } catch (e) {
+        vscode2.window.showErrorMessage(`Cyberpunk Spider : ${e.message}`);
+      }
+    })
+  ];
+  panel.onDidDispose(() => {
+    current = void 0;
+    subs.forEach((s) => s.dispose());
+  });
+  context.subscriptions.push(panel);
+}
+function nonce() {
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  let s = "";
+  for (let i = 0; i < 24; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  return s;
+}
+function getHtml() {
+  const n = nonce();
+  return (
+    /* html */
+    `<!DOCTYPE html>
 <html lang="fr"><head><meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'nonce-${t}'; script-src 'nonce-${t}';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'nonce-${n}'; script-src 'nonce-${n}';">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<style nonce="${t}">
+<style nonce="${n}">
 :root{--bg:#0a0a14;--card:#12121f;--line:#26264a;--fg:#d8f3ff;--dim:#8a8fb5;--neon:#00f0ff;--pink:#ff2bd6;--green:#39ff14}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--fg);font:13px/1.5 var(--vscode-editor-font-family,monospace);margin:0;padding:24px;max-width:720px}
@@ -62,7 +380,7 @@ button.danger{color:var(--pink);border-color:var(--pink)}
  <div class="hint">L'installation modifie workbench.html de VS Code. Rechargez la fen\xEAtre apr\xE8s une installation.</div>
 </section>
 
-<script nonce="${t}">
+<script nonce="${n}">
 const vscode = acquireVsCodeApi();
 const $ = (id) => document.getElementById(id);
 const send = (m) => vscode.postMessage(m);
@@ -128,4 +446,113 @@ $('btn-uninstall').addEventListener('click', function () { send({ type: 'uninsta
 $('btn-reload').addEventListener('click', function () { send({ type: 'reload' }); });
 window.addEventListener('message', function (e) { if (e.data && e.data.type === 'state') render(e.data); });
 send({ type: 'ready' });
-</script></body></html>`}var C="cyberpunkSpider.installedBefore";function se(t){let e=new x(a.env.appRoot,O.join(t.extensionPath,"dist","injected.js")),n=a.window.createStatusBarItem(a.StatusBarAlignment.Right,0);n.command="cyberpunkSpider.toggle",t.subscriptions.push(n);let o=()=>{let i=e.isInstalled()&&h().enabled;n.text=i?"$(bug) Spider":"$(bug) Spider (off)",n.tooltip="Cyberpunk Spider \u2014 cliquer pour activer/d\xE9sactiver",n.show()};async function s(i){await a.window.showInformationMessage(i,"Recharger la fen\xEAtre")&&await a.commands.executeCommand("workbench.action.reloadWindow")}async function p(){try{let{checksumUpdated:i}=e.install(h());await t.globalState.update(C,!0),o(),await s(`Araign\xE9e install\xE9e${i?"":" (checksum non mis \xE0 jour : un avertissement \xAB installation corrompue \xBB peut appara\xEEtre.)"} Rechargez la fen\xEAtre pour la voir.`)}catch(i){N(i,"installer")}}async function l(){try{e.uninstall(),await t.globalState.update(C,!1),o(),await s("Patch retir\xE9. Rechargez la fen\xEAtre pour restaurer VS Code.")}catch(i){N(i,"d\xE9sinstaller")}}t.subscriptions.push(a.commands.registerCommand("cyberpunkSpider.enable",p),a.commands.registerCommand("cyberpunkSpider.disable",l),a.commands.registerCommand("cyberpunkSpider.toggle",async()=>{if(!e.isInstalled()){await a.window.showInformationMessage("L'araign\xE9e n'est pas encore install\xE9e dans VS Code.","Installer")&&await p();return}let i=a.workspace.getConfiguration(g);await i.update("enabled",!i.get("enabled",!0),a.ConfigurationTarget.Global)}),a.commands.registerCommand("cyberpunkSpider.openSettings",()=>M(t,{isInstalled:()=>e.isInstalled(),install:p,uninstall:l,reload:()=>void a.commands.executeCommand("workbench.action.reloadWindow")})),a.workspace.onDidChangeConfiguration(i=>{if(i.affectsConfiguration(g)){try{e.isInstalled()&&e.writeConfig(h())}catch(u){N(u,"\xE9crire la configuration")}o()}}));try{e.isInstalled()?e.isUpToDate()||e.install(h()):t.globalState.get(C)&&a.window.showWarningMessage("VS Code a probablement \xE9t\xE9 mis \xE0 jour : le patch de Cyberpunk Spider a disparu.","R\xE9appliquer","Ne plus me le demander").then(async i=>{i==="R\xE9appliquer"?await p():i&&await t.globalState.update(C,!1)})}catch{}o()}function le(){}function N(t,e){let n=t;if(n.code==="EACCES"||n.code==="EPERM"){let o=process.platform==="win32"?"Relancez VS Code en administrateur (ou utilisez l'installation \xAB utilisateur \xBB).":process.platform==="darwin"?'Donnez-vous les droits : sudo chown -R "$(whoami)" "<dossier VS Code>/Contents/Resources/app/out".':'Donnez-vous les droits : sudo chown -R "$(whoami)" "<dossier VS Code>/resources/app/out".';a.window.showErrorMessage(`Impossible de ${e} : droits insuffisants sur VS Code. ${o}`)}else a.window.showErrorMessage(`Impossible de ${e} : ${n.message}`)}0&&(module.exports={activate,deactivate});
+</script></body></html>`
+  );
+}
+
+// src/extension/extension.ts
+var KEY_INSTALLED_BEFORE = "cyberpunkSpider.installedBefore";
+function activate(context) {
+  const patcher = new Patcher(vscode3.env.appRoot, path2.join(context.extensionPath, "dist", "injected.js"));
+  const status = vscode3.window.createStatusBarItem(vscode3.StatusBarAlignment.Right, 0);
+  status.command = "cyberpunkSpider.toggle";
+  context.subscriptions.push(status);
+  const refreshStatus = () => {
+    const on = patcher.isInstalled() && readConfig().enabled;
+    status.text = on ? "$(bug) Spider" : "$(bug) Spider (off)";
+    status.tooltip = "Cyberpunk Spider \u2014 cliquer pour activer/d\xE9sactiver";
+    status.show();
+  };
+  async function reloadPrompt(message) {
+    const pick = await vscode3.window.showInformationMessage(message, "Recharger la fen\xEAtre");
+    if (pick) await vscode3.commands.executeCommand("workbench.action.reloadWindow");
+  }
+  async function install() {
+    try {
+      const { checksumUpdated } = patcher.install(readConfig());
+      await context.globalState.update(KEY_INSTALLED_BEFORE, true);
+      refreshStatus();
+      const extra = checksumUpdated ? "" : " (checksum non mis \xE0 jour : un avertissement \xAB installation corrompue \xBB peut appara\xEEtre.)";
+      await reloadPrompt(`Araign\xE9e install\xE9e${extra} Rechargez la fen\xEAtre pour la voir.`);
+    } catch (e) {
+      showFsError(e, "installer");
+    }
+  }
+  async function uninstall() {
+    try {
+      patcher.uninstall();
+      await context.globalState.update(KEY_INSTALLED_BEFORE, false);
+      refreshStatus();
+      await reloadPrompt("Patch retir\xE9. Rechargez la fen\xEAtre pour restaurer VS Code.");
+    } catch (e) {
+      showFsError(e, "d\xE9sinstaller");
+    }
+  }
+  context.subscriptions.push(
+    vscode3.commands.registerCommand("cyberpunkSpider.enable", install),
+    vscode3.commands.registerCommand("cyberpunkSpider.disable", uninstall),
+    vscode3.commands.registerCommand("cyberpunkSpider.toggle", async () => {
+      if (!patcher.isInstalled()) {
+        const pick = await vscode3.window.showInformationMessage(
+          "L'araign\xE9e n'est pas encore install\xE9e dans VS Code.",
+          "Installer"
+        );
+        if (pick) await install();
+        return;
+      }
+      const cfg = vscode3.workspace.getConfiguration(SECTION);
+      await cfg.update("enabled", !cfg.get("enabled", true), vscode3.ConfigurationTarget.Global);
+    }),
+    vscode3.commands.registerCommand(
+      "cyberpunkSpider.openSettings",
+      () => openSettingsPanel(context, {
+        isInstalled: () => patcher.isInstalled(),
+        install,
+        uninstall,
+        reload: () => void vscode3.commands.executeCommand("workbench.action.reloadWindow")
+      })
+    ),
+    vscode3.workspace.onDidChangeConfiguration((e) => {
+      if (!e.affectsConfiguration(SECTION)) return;
+      try {
+        if (patcher.isInstalled()) patcher.writeConfig(readConfig());
+      } catch (err) {
+        showFsError(err, "\xE9crire la configuration");
+      }
+      refreshStatus();
+    })
+  );
+  try {
+    if (patcher.isInstalled()) {
+      if (!patcher.isUpToDate()) patcher.install(readConfig());
+    } else if (context.globalState.get(KEY_INSTALLED_BEFORE)) {
+      void vscode3.window.showWarningMessage(
+        "VS Code a probablement \xE9t\xE9 mis \xE0 jour : le patch de Cyberpunk Spider a disparu.",
+        "R\xE9appliquer",
+        "Ne plus me le demander"
+      ).then(async (pick) => {
+        if (pick === "R\xE9appliquer") await install();
+        else if (pick) await context.globalState.update(KEY_INSTALLED_BEFORE, false);
+      });
+    }
+  } catch {
+  }
+  refreshStatus();
+}
+function deactivate() {
+}
+function showFsError(e, action) {
+  const err = e;
+  if (err.code === "EACCES" || err.code === "EPERM") {
+    const hint = process.platform === "win32" ? "Relancez VS Code en administrateur (ou utilisez l'installation \xAB utilisateur \xBB)." : process.platform === "darwin" ? 'Donnez-vous les droits : sudo chown -R "$(whoami)" "<dossier VS Code>/Contents/Resources/app/out".' : 'Donnez-vous les droits : sudo chown -R "$(whoami)" "<dossier VS Code>/resources/app/out".';
+    void vscode3.window.showErrorMessage(`Impossible de ${action} : droits insuffisants sur VS Code. ${hint}`);
+  } else {
+    void vscode3.window.showErrorMessage(`Impossible de ${action} : ${err.message}`);
+  }
+}
+// Annotate the CommonJS export names for ESM import in node:
+0 && (module.exports = {
+  activate,
+  deactivate
+});
+//# sourceMappingURL=extension.js.map

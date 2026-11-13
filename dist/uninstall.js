@@ -1,6 +1,205 @@
-"use strict";var F=Object.create;var b=Object.defineProperty;var E=Object.getOwnPropertyDescriptor;var P=Object.getOwnPropertyNames;var T=Object.getPrototypeOf,_=Object.prototype.hasOwnProperty;var j=(t,e,n,s)=>{if(e&&typeof e=="object"||typeof e=="function")for(let o of P(e))!_.call(t,o)&&o!==n&&b(t,o,{get:()=>e[o],enumerable:!(s=E(e,o))||s.enumerable});return t};var a=(t,e,n)=>(n=t!=null?F(T(t)):{},j(e||!t||!t.__esModule?b(n,"default",{value:t,enumerable:!0}):n,t));var x=a(require("fs")),c=a(require("path"));var r=a(require("fs")),i=a(require("path")),k=a(require("crypto"));var I={"Spider-Verse":["#39ff14","#b026ff","#00f0ff","#ff2bd6"],"Neon Tokyo":["#ff2bd6","#00f0ff","#fff200"],Matrix:["#00ff41","#00b82e","#b8ffcb"],Synthwave:["#ff6ec7","#7a5cff","#00e5ff"],Miles:["#ff1e3c","#00f0ff","#ffffff"]},L={enabled:!0,speed:1,size:1,glow:.8,idleSeconds:60,palette:I["Spider-Verse"],huntBugs:!0,silkTrail:!0},f="cyberpunk-spider.js",l="cyberpunk-spider.config.js",u="cyberpunk-spider.config.json",y="__CYBERPUNK_SPIDER_CONFIG__";var g="<!-- CYBERPUNK-SPIDER-START -->",w="<!-- CYBERPUNK-SPIDER-END -->",d=t=>t.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"),N=new RegExp(`${d(g)}[\\s\\S]*?${d(w)}\\n?`,"g");function A(){return`${g}
-<script src="${l}"></script>
-<script src="${f}"></script>
-${w}
-`}function h(t){return t.includes(g)}function C(t){return t.replace(N,"")}function O(t){let e=C(t),n=e.lastIndexOf("</body>");if(n<0&&(n=e.lastIndexOf("</html>")),n<0)throw new Error("workbench.html : balise </body> ou </html> introuvable.");return e.slice(0,n)+A()+e.slice(n)}function R(t){return k.createHash("sha256").update(t).digest("base64").replace(/=+$/,"")}function $(t,e,n){let s=new RegExp(`("${d(e)}"\\s*:\\s*")[^"]*(")`);return s.test(t)?t.replace(s,`$1${n}$2`):null}function B(t){return`window.${y}=${JSON.stringify(t)};
-`}var v=["vs/code/electron-sandbox/workbench/workbench.html","vs/code/electron-sandbox/workbench/workbench.esm.html","vs/code/electron-browser/workbench/workbench.html"];function G(t){let e=[];for(let n of v){let s=i.join(t,"out",...n.split("/"));r.existsSync(s)&&e.push({html:s,dir:i.dirname(s),checksumKey:n,product:i.join(t,"product.json")})}if(!e.length)throw new Error(`workbench.html introuvable sous ${t}. Version de VS Code non support\xE9e ?`);return e}var p=class{constructor(e,n){this.appRoot=e;this.injectedSrc=n}targets(){return G(this.appRoot)}isInstalled(){try{return this.targets().every(e=>h(r.readFileSync(e.html,"utf8"))&&r.existsSync(i.join(e.dir,f)))}catch{return!1}}isUpToDate(){try{let e=r.readFileSync(this.injectedSrc);return this.targets().every(n=>r.readFileSync(i.join(n.dir,f)).equals(e))}catch{return!1}}writeConfig(e){for(let n of this.targets())this.writeConfigIn(n,e)}writeConfigIn(e,n){r.writeFileSync(i.join(e.dir,l),B(n),"utf8"),r.writeFileSync(i.join(e.dir,u),JSON.stringify(n),"utf8")}install(e){let n=this.targets();for(let o of n)r.accessSync(o.html,r.constants.W_OK);let s=!0;for(let o of n){let m=r.readFileSync(o.html,"utf8");h(m)||r.copyFileSync(o.html,o.html+".cyberpunk-spider.bak"),r.copyFileSync(this.injectedSrc,i.join(o.dir,f)),this.writeConfigIn(o,e),r.writeFileSync(o.html,O(m),"utf8"),s=this.syncChecksum(o)&&s}return{checksumUpdated:s}}uninstall(){for(let e of this.targets()){let n=r.readFileSync(e.html,"utf8");h(n)&&r.writeFileSync(e.html,C(n),"utf8"),this.syncChecksum(e);for(let s of[f,l,u])try{r.unlinkSync(i.join(e.dir,s))}catch{}}}syncChecksum(e){try{let n=r.readFileSync(e.product,"utf8"),s=$(n,e.checksumKey,R(r.readFileSync(e.html)));return s===null?!1:(s!==n&&r.writeFileSync(e.product,s,"utf8"),!0)}catch{return!1}}};var S=c.dirname(process.execPath),K=[c.join(S,"resources","app"),c.join(S,"..","Resources","app"),c.join(S,"..","resources","app")];for(let t of K)try{if(x.existsSync(c.join(t,"product.json"))){new p(t,"").uninstall();break}}catch{}
+"use strict";
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+  // If the importer is in node compatibility mode or this is not an ESM
+  // file that has been converted to a CommonJS file using a Babel-
+  // compatible transform (i.e. "__esModule" has not been set), then set
+  // "default" to the CommonJS "module.exports" for node compatibility.
+  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+  mod
+));
+
+// src/extension/uninstall.ts
+var fs2 = __toESM(require("fs"));
+var path2 = __toESM(require("path"));
+
+// src/extension/patcher.ts
+var fs = __toESM(require("fs"));
+var path = __toESM(require("path"));
+var crypto = __toESM(require("crypto"));
+
+// src/shared/types.ts
+var PRESETS = {
+  "Spider-Verse": ["#39ff14", "#b026ff", "#00f0ff", "#ff2bd6"],
+  "Neon Tokyo": ["#ff2bd6", "#00f0ff", "#fff200"],
+  Matrix: ["#00ff41", "#00b82e", "#b8ffcb"],
+  Synthwave: ["#ff6ec7", "#7a5cff", "#00e5ff"],
+  Miles: ["#ff1e3c", "#00f0ff", "#ffffff"]
+};
+var DEFAULT_CONFIG = {
+  enabled: true,
+  speed: 1,
+  size: 1,
+  glow: 0.8,
+  idleSeconds: 60,
+  palette: PRESETS["Spider-Verse"],
+  huntBugs: true,
+  silkTrail: true
+};
+var ASSET_SCRIPT = "cyberpunk-spider.js";
+var ASSET_CONFIG = "cyberpunk-spider.config.js";
+var ASSET_CONFIG_JSON = "cyberpunk-spider.config.json";
+var CONFIG_GLOBAL = "__CYBERPUNK_SPIDER_CONFIG__";
+
+// src/extension/patcher.ts
+var MARK_START = "<!-- CYBERPUNK-SPIDER-START -->";
+var MARK_END = "<!-- CYBERPUNK-SPIDER-END -->";
+var esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+var BLOCK_RE = new RegExp(`${esc(MARK_START)}[\\s\\S]*?${esc(MARK_END)}\\n?`, "g");
+function buildBlock() {
+  return `${MARK_START}
+<script src="${ASSET_CONFIG}"></script>
+<script src="${ASSET_SCRIPT}"></script>
+${MARK_END}
+`;
+}
+function hasBlock(html) {
+  return html.includes(MARK_START);
+}
+function removeBlock(html) {
+  return html.replace(BLOCK_RE, "");
+}
+function injectBlock(html) {
+  const clean = removeBlock(html);
+  let i = clean.lastIndexOf("</body>");
+  if (i < 0) i = clean.lastIndexOf("</html>");
+  if (i < 0) throw new Error("workbench.html : balise </body> ou </html> introuvable.");
+  return clean.slice(0, i) + buildBlock() + clean.slice(i);
+}
+function computeChecksum(content) {
+  return crypto.createHash("sha256").update(content).digest("base64").replace(/=+$/, "");
+}
+function replaceChecksum(productRaw, key, newHash) {
+  const re = new RegExp(`("${esc(key)}"\\s*:\\s*")[^"]*(")`);
+  if (!re.test(productRaw)) return null;
+  return productRaw.replace(re, `$1${newHash}$2`);
+}
+function configFileContent(cfg) {
+  return `window.${CONFIG_GLOBAL}=${JSON.stringify(cfg)};
+`;
+}
+var HTML_CANDIDATES = [
+  "vs/code/electron-sandbox/workbench/workbench.html",
+  "vs/code/electron-sandbox/workbench/workbench.esm.html",
+  "vs/code/electron-browser/workbench/workbench.html"
+];
+function locateAll(appRoot) {
+  const found = [];
+  for (const rel of HTML_CANDIDATES) {
+    const html = path.join(appRoot, "out", ...rel.split("/"));
+    if (fs.existsSync(html)) {
+      found.push({ html, dir: path.dirname(html), checksumKey: rel, product: path.join(appRoot, "product.json") });
+    }
+  }
+  if (!found.length) {
+    throw new Error(`workbench.html introuvable sous ${appRoot}. Version de VS Code non support\xE9e ?`);
+  }
+  return found;
+}
+var Patcher = class {
+  /** `injectedSrc` : chemin du bundle dist/injected.js (vide pour une simple désinstallation). */
+  constructor(appRoot, injectedSrc) {
+    this.appRoot = appRoot;
+    this.injectedSrc = injectedSrc;
+  }
+  targets() {
+    return locateAll(this.appRoot);
+  }
+  isInstalled() {
+    try {
+      return this.targets().every(
+        (p) => hasBlock(fs.readFileSync(p.html, "utf8")) && fs.existsSync(path.join(p.dir, ASSET_SCRIPT))
+      );
+    } catch {
+      return false;
+    }
+  }
+  /** Le script déposé correspond-il à celui de l'extension installée ? */
+  isUpToDate() {
+    try {
+      const src = fs.readFileSync(this.injectedSrc);
+      return this.targets().every((p) => fs.readFileSync(path.join(p.dir, ASSET_SCRIPT)).equals(src));
+    } catch {
+      return false;
+    }
+  }
+  writeConfig(cfg) {
+    for (const p of this.targets()) this.writeConfigIn(p, cfg);
+  }
+  writeConfigIn(p, cfg) {
+    fs.writeFileSync(path.join(p.dir, ASSET_CONFIG), configFileContent(cfg), "utf8");
+    fs.writeFileSync(path.join(p.dir, ASSET_CONFIG_JSON), JSON.stringify(cfg), "utf8");
+  }
+  install(cfg) {
+    const targets = this.targets();
+    for (const p of targets) fs.accessSync(p.html, fs.constants.W_OK);
+    let allSynced = true;
+    for (const p of targets) {
+      const original = fs.readFileSync(p.html, "utf8");
+      if (!hasBlock(original)) fs.copyFileSync(p.html, p.html + ".cyberpunk-spider.bak");
+      fs.copyFileSync(this.injectedSrc, path.join(p.dir, ASSET_SCRIPT));
+      this.writeConfigIn(p, cfg);
+      fs.writeFileSync(p.html, injectBlock(original), "utf8");
+      allSynced = this.syncChecksum(p) && allSynced;
+    }
+    return { checksumUpdated: allSynced };
+  }
+  uninstall() {
+    for (const p of this.targets()) {
+      const html = fs.readFileSync(p.html, "utf8");
+      if (hasBlock(html)) fs.writeFileSync(p.html, removeBlock(html), "utf8");
+      this.syncChecksum(p);
+      for (const f of [ASSET_SCRIPT, ASSET_CONFIG, ASSET_CONFIG_JSON]) {
+        try {
+          fs.unlinkSync(path.join(p.dir, f));
+        } catch {
+        }
+      }
+    }
+  }
+  /** Recalcule le checksum de workbench.html dans product.json pour éviter l'alerte « installation corrompue ». */
+  syncChecksum(p) {
+    try {
+      const raw = fs.readFileSync(p.product, "utf8");
+      const next = replaceChecksum(raw, p.checksumKey, computeChecksum(fs.readFileSync(p.html)));
+      if (next === null) return false;
+      if (next !== raw) fs.writeFileSync(p.product, next, "utf8");
+      return true;
+    } catch {
+      return false;
+    }
+  }
+};
+
+// src/extension/uninstall.ts
+var dir = path2.dirname(process.execPath);
+var candidates = [
+  path2.join(dir, "resources", "app"),
+  // Windows / Linux
+  path2.join(dir, "..", "Resources", "app"),
+  // macOS
+  path2.join(dir, "..", "resources", "app")
+];
+for (const root of candidates) {
+  try {
+    if (fs2.existsSync(path2.join(root, "product.json"))) {
+      new Patcher(root, "").uninstall();
+      break;
+    }
+  } catch {
+  }
+}
+//# sourceMappingURL=uninstall.js.map

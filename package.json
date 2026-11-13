@@ -3,11 +3,11 @@
   "displayName": "Cyberpunk Spider",
   "description": "Une araignée cyberpunk néon (cinématique inverse) qui se promène sur tout VS Code, chasse vos bugs et tisse sa toile quand vous êtes inactif.",
   "version": "0.1.0",
-  "publisher": "your-publisher-id",
+  "publisher": "avatrix",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-github/cyberpunk-spider.git"
+    "url": "https://github.com/avatGit/cyberpunk-spider.git"
   },
   "engines": {
     "vscode": "^1.85.0"
@@ -161,5 +161,9 @@
     "esbuild": "^0.24.0",
     "typescript": "^5.5.0",
     "vitest": "^2.1.0"
-  }
+  },
+  "bugs": {
+    "url": "https://github.com/avatGit/cyberpunk-spider/issues"
+  },
+  "homepage": "https://github.com/avatGit/cyberpunk-spider#readme"
 }
