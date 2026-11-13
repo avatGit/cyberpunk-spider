@@ -2,6 +2,8 @@
 
 A neon, procedurally animated spider that roams your **whole VS Code window**: over the editor, sidebars and menus.
 
+![Cyberpunk Spider](images/SpiderPunk.gif)
+
 - **Procedural legs (inverse kinematics)**: 8 two-bone legs with a tetrapod gait. Feet stay planted and step when the body moves away.
 - **Bug hunter**: wanders randomly, but walks to visible error squiggles in the editor and inspects them.
 - **Idle web weaving**: stop typing and it heads for the corner farthest from your text cursor and weaves a web. Type again and the web fades out.
@@ -29,12 +31,12 @@ VS Code has no API to draw over the whole window. This extension adds a small `<
 
 ## Commands
 
-| Command | What it does |
-| --- | --- |
-| `Cyberpunk Spider: Installer / réappliquer l'araignée` | Applies the patch (`cyberpunkSpider.enable`) |
+| Command                                                         | What it does                                                  |
+| --------------------------------------------------------------- | ------------------------------------------------------------- |
+| `Cyberpunk Spider: Installer / réappliquer l'araignée`          | Applies the patch (`cyberpunkSpider.enable`)                  |
 | `Cyberpunk Spider: Désinstaller l'araignée (restaurer VS Code)` | Removes it and restores the files (`cyberpunkSpider.disable`) |
-| `Cyberpunk Spider: Activer / désactiver rapidement` | Live toggle, also via the status bar item |
-| `Cyberpunk Spider: Ouvrir les réglages` | Webview with all options |
+| `Cyberpunk Spider: Activer / désactiver rapidement`             | Live toggle, also via the status bar item                     |
+| `Cyberpunk Spider: Ouvrir les réglages`                         | Webview with all options                                      |
 
 ## Settings
 
