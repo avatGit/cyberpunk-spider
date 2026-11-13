@@ -1,0 +1,31 @@
+name: Release
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # nécessaire au Trusted Publishing (OIDC) du Marketplace
+    env:
+      OVSX_PAT: ${{ secrets.OVSX_PAT }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run package
+      # Marketplace Microsoft : aucun token, identité fédérée (Trusted Publishing configuré sur la page du publisher)
+      - run: npx @vscode/vsce publish --no-dependencies --oidc
+      # Open VSX (optionnel) : ne s'exécute que si le secret OVSX_PAT existe
+      - if: ${{ env.OVSX_PAT != '' }}
+        run: npx ovsx publish *.vsix -p "$OVSX_PAT"
