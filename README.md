@@ -2,7 +2,7 @@
 
 A neon, procedurally animated spider that roams your **whole VS Code window**: over the editor, sidebars and menus.
 
-![Cyberpunk Spider](images/SpiderPunk.gif)
+![Cyberpunk Spider](https://raw.githubusercontent.com/avatGit/cyberpunk-spider/main/images/SpiderPunk.gif)
 
 - **Procedural legs (inverse kinematics)**: 8 two-bone legs with a tetrapod gait. Feet stay planted and step when the body moves away.
 - **Bug hunter**: wanders randomly, but walks to visible error squiggles in the editor and inspects them.
