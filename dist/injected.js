@@ -698,6 +698,15 @@
     }
   };
 
+  // src/injected/alive.ts
+  var GRACE_MS = 9e4;
+  var STALE_MS = 10 * 6e4;
+  function extensionAlive(now, bootAt, alive, pollWorks) {
+    if (alive == null || !pollWorks) return true;
+    if (now - bootAt < GRACE_MS) return true;
+    return now - alive < STALE_MS;
+  }
+
   // src/injected/main.ts
   var win = window;
   var ALERT = [255, 51, 85];
@@ -706,6 +715,9 @@
   function boot() {
     let cfg = sanitizeConfig(win[CONFIG_GLOBAL]);
     let pollFails = 0;
+    const bootAt = Date.now();
+    const bootAlive = win[CONFIG_GLOBAL]?.alive;
+    let alive = typeof bootAlive === "number" ? bootAlive : null;
     const palette = new PaletteCycler();
     palette.setPalette(cfg.palette);
     const activity = new ActivityTracker();
@@ -792,7 +804,7 @@
     function applyConfig(next) {
       cfg = next;
       palette.setPalette(cfg.palette);
-      if (cfg.enabled) start();
+      if (cfg.enabled && extensionAlive(Date.now(), bootAt, alive, pollFails < 4)) start();
       else stop();
     }
     function pollConfig() {
@@ -802,6 +814,7 @@
         return r.json();
       }).then((j) => {
         pollFails = 0;
+        if (typeof j?.alive === "number") alive = j.alive;
         applyConfig(sanitizeConfig(j));
       }).catch(() => {
         pollFails++;

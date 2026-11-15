@@ -2,7 +2,7 @@
   "name": "cyberpunk-spider",
   "displayName": "Cyberpunk Spider",
   "description": "Une araignée cyberpunk néon (cinématique inverse) qui se promène sur tout VS Code, chasse vos bugs et tisse sa toile quand vous êtes inactif.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "avatrix",
   "license": "MIT",
   "repository": {
@@ -145,7 +145,7 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run build",
-    "vscode:uninstall": "node ./dist/uninstall.js",
+    "vscode:uninstall": "node ./dist/cli.js uninstall",
     "build": "node esbuild.js --production",
     "build:dev": "node esbuild.js",
     "watch": "node esbuild.js --watch",

@@ -24,8 +24,8 @@ const configs = [
   },
   {
     ...common,
-    entryPoints: ['src/extension/uninstall.ts'],
-    outfile: 'dist/uninstall.js',
+    entryPoints: ['src/extension/cli.ts'],
+    outfile: 'dist/cli.js',
     platform: 'node',
     format: 'cjs',
     target: 'node18',

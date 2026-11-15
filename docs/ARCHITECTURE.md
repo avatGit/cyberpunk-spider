@@ -9,7 +9,8 @@
 │   config.ts        lit cyberpunkSpider.* → SpiderConfig                       │
 │   patcher.ts       patch / unpatch de workbench.html (+ checksums product.json)│
 │   settingsPanel.ts Webview de réglages                                        │
-│   uninstall.ts     hook vscode:uninstall (Node pur, sans module 'vscode')     │
+│   cli.ts           install/uninstall en Node pur : hook vscode:uninstall + sudo │
+│   elevate.ts       construit la commande `sudo env ELECTRON_RUN_AS_NODE=1 …`   │
 └───────────────┬───────────────────────────────────────────────────────────────┘
                 │ écrit dans <appRoot>/out/vs/code/electron-sandbox/workbench/
                 ▼
@@ -48,7 +49,10 @@
 | « Coin inutile » | Coin le plus éloigné du curseur de texte ; aléatoire sinon | Simple et pertinent |
 | Inactivité | `keydown` / `paste` en capture sur `window` | Spec : activité = frappe. La souris est ignorée (et le canvas ne capte aucun clic) |
 | Intégrité VS Code | Recalcul ciblé de `product.json > checksums` | Évite l'alerte « installation corrompue » ; recalculé aussi à la désinstallation |
-| Désinstallation | Commande + hook `vscode:uninstall` | Restitue `workbench.html` à l'identique (testé) |
+| Désinstallation | Commande + hook `vscode:uninstall` (`cli.js uninstall`) | Restitue `workbench.html` à l'identique (testé). **Limite** : le hook ne s'exécute qu'au redémarrage complet de VS Code et échoue sans droits d'écriture |
+| Auto-arrêt | L'extension écrit un horodatage `alive` (démarrage + toutes les 2 min) dans `config.json` ; le runtime s'arrête si > 10 min sans signe de vie (délai de grâce 90 s) | Si l'extension est désinstallée/désactivée mais que le patch reste, l'araignée ne tourne pas indéfiniment. Jamais déclenché si `fetch` échoue (pas de faux positif) |
+| Droits root (Linux) | Sur EACCES, l'extension ouvre un terminal avec `sudo env ELECTRON_RUN_AS_NODE=1 <code> cli.js install …` | Pas besoin de Node installé. `cli.js` rend ensuite `workbench.html`, `product.json` et le dossier du patch à l'utilisateur (`SUDO_UID/GID`) : plus de root pour la suite |
+| Premier lancement | Notification « Installer maintenant / Lire le guide », bouton d'état « à installer » | Sans action explicite rien n'apparaît : il faut l'expliquer |
 | Plusieurs `workbench.html` | `locateAll()` patche chaque variante présente (`.html`, `.esm.html`, `electron-browser`) | Le chemin varie selon les versions de VS Code |
 | Extension côté UI | `extensionKind: ["ui"]` | En SSH/WSL/Dev Container, c'est l'installation **locale** qu'il faut patcher |
 

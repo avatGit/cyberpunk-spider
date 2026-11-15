@@ -3,25 +3,84 @@ import * as path from 'path';
 import { Patcher } from './patcher';
 import { SECTION, readConfig } from './config';
 import { openSettingsPanel } from './settingsPanel';
+import { buildSudoCommand } from './elevate';
 
 const KEY_INSTALLED_BEFORE = 'cyberpunkSpider.installedBefore';
+const KEY_WELCOMED = 'cyberpunkSpider.welcomed';
+const GUIDE_URL = 'https://github.com/avatGit/cyberpunk-spider#installation-par-système';
+const HEARTBEAT_MS = 2 * 60 * 1000;
+
+type Kind = 'install' | 'uninstall';
 
 export function activate(context: vscode.ExtensionContext): void {
-  const patcher = new Patcher(vscode.env.appRoot, path.join(context.extensionPath, 'dist', 'injected.js'));
+  const distDir = path.join(context.extensionPath, 'dist');
+  const injectedPath = path.join(distDir, 'injected.js');
+  const patcher = new Patcher(vscode.env.appRoot, injectedPath);
 
   const status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 0);
   status.command = 'cyberpunkSpider.toggle';
   context.subscriptions.push(status);
   const refreshStatus = () => {
-    const on = patcher.isInstalled() && readConfig().enabled;
-    status.text = on ? '$(bug) Spider' : '$(bug) Spider (off)';
-    status.tooltip = 'Cyberpunk Spider — cliquer pour activer/désactiver';
+    const installed = patcher.isInstalled();
+    if (!installed) {
+      status.text = '$(bug) Spider : à installer';
+      status.tooltip = "L'araignée n'est pas encore installée dans VS Code — cliquer pour l'installer";
+      status.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
+    } else {
+      status.text = readConfig().enabled ? '$(bug) Spider' : '$(bug) Spider (off)';
+      status.tooltip = 'Cyberpunk Spider — cliquer pour activer/désactiver';
+      status.backgroundColor = undefined;
+    }
     status.show();
   };
 
   async function reloadPrompt(message: string): Promise<void> {
     const pick = await vscode.window.showInformationMessage(message, 'Recharger la fenêtre');
     if (pick) await vscode.commands.executeCommand('workbench.action.reloadWindow');
+  }
+
+  /** Droits insuffisants : propose l'élévation (sudo dans un terminal visible) ou le guide. */
+  async function handleFsError(e: unknown, kind: Kind): Promise<void> {
+    const err = e as NodeJS.ErrnoException;
+    const verb = kind === 'install' ? "installer l'araignée" : 'retirer le patch';
+    if (err.code !== 'EACCES' && err.code !== 'EPERM') {
+      void vscode.window.showErrorMessage(`Impossible de ${verb} : ${err.message}`);
+      return;
+    }
+    if (process.platform === 'win32') {
+      const pick = await vscode.window.showErrorMessage(
+        `Impossible de ${verb} : VS Code est installé dans un dossier protégé. Fermez VS Code, relancez-le en tant qu'administrateur, puis réessayez (ou utilisez l'installeur « User » de VS Code).`,
+        'Ouvrir le guide',
+      );
+      if (pick) void vscode.env.openExternal(vscode.Uri.parse(GUIDE_URL));
+      return;
+    }
+    const pick = await vscode.window.showWarningMessage(
+      `Impossible de ${verb} : VS Code est installé dans un dossier protégé (${vscode.env.appRoot}). ` +
+        'Il faut des droits administrateur une seule fois ; ensuite tout fonctionne sans.',
+      'Ouvrir un terminal avec sudo',
+      'Ouvrir le guide',
+    );
+    if (pick === 'Ouvrir le guide') void vscode.env.openExternal(vscode.Uri.parse(GUIDE_URL));
+    if (pick === 'Ouvrir un terminal avec sudo') {
+      const cmd = buildSudoCommand({
+        kind,
+        execPath: process.execPath,
+        cliPath: path.join(distDir, 'cli.js'),
+        appRoot: vscode.env.appRoot,
+        injectedPath,
+        cfg: readConfig(),
+      });
+      const term = vscode.window.createTerminal('Cyberpunk Spider (sudo)');
+      term.show();
+      term.sendText(cmd, true);
+      void vscode.window.showInformationMessage(
+        'Saisissez votre mot de passe dans le terminal. Quand « OK » s’affiche, rechargez la fenêtre.',
+        'Recharger la fenêtre',
+      ).then((p) => {
+        if (p) void vscode.commands.executeCommand('workbench.action.reloadWindow');
+      });
+    }
   }
 
   async function install(): Promise<void> {
@@ -34,7 +93,7 @@ export function activate(context: vscode.ExtensionContext): void {
         : ' (checksum non mis à jour : un avertissement « installation corrompue » peut apparaître.)';
       await reloadPrompt(`Araignée installée${extra} Rechargez la fenêtre pour la voir.`);
     } catch (e) {
-      showFsError(e, 'installer');
+      await handleFsError(e, 'install');
     }
   }
 
@@ -45,7 +104,7 @@ export function activate(context: vscode.ExtensionContext): void {
       refreshStatus();
       await reloadPrompt('Patch retiré. Rechargez la fenêtre pour restaurer VS Code.');
     } catch (e) {
-      showFsError(e, 'désinstaller');
+      await handleFsError(e, 'uninstall');
     }
   }
 
@@ -54,11 +113,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('cyberpunkSpider.disable', uninstall),
     vscode.commands.registerCommand('cyberpunkSpider.toggle', async () => {
       if (!patcher.isInstalled()) {
-        const pick = await vscode.window.showInformationMessage(
-          "L'araignée n'est pas encore installée dans VS Code.",
-          'Installer',
-        );
-        if (pick) await install();
+        await install();
         return;
       }
       const cfg = vscode.workspace.getConfiguration(SECTION);
@@ -76,18 +131,30 @@ export function activate(context: vscode.ExtensionContext): void {
       if (!e.affectsConfiguration(SECTION)) return;
       try {
         if (patcher.isInstalled()) patcher.writeConfig(readConfig());
-      } catch (err) {
-        showFsError(err, 'écrire la configuration');
+      } catch {
+        /* droits perdus (mise à jour de VS Code) : on le saura au prochain démarrage */
       }
       refreshStatus();
     }),
   );
 
-  // Démarrage : rafraîchit les assets après une mise à jour de l'extension,
-  // ou propose de réappliquer le patch après une mise à jour de VS Code.
+  // Signe de vie : le runtime injecté s'arrête de lui-même si ce signal disparaît
+  // (extension désinstallée ou désactivée alors que le patch est encore dans workbench.html).
+  const beat = () => {
+    try {
+      if (patcher.isInstalled()) patcher.writeConfig(readConfig());
+    } catch {
+      /* silencieux */
+    }
+  };
+  const timer = setInterval(beat, HEARTBEAT_MS);
+  context.subscriptions.push({ dispose: () => clearInterval(timer) });
+
+  // Démarrage
   try {
     if (patcher.isInstalled()) {
       if (!patcher.isUpToDate()) patcher.install(readConfig());
+      else beat();
     } else if (context.globalState.get<boolean>(KEY_INSTALLED_BEFORE)) {
       void vscode.window
         .showWarningMessage(
@@ -99,26 +166,24 @@ export function activate(context: vscode.ExtensionContext): void {
           if (pick === 'Réappliquer') await install();
           else if (pick) await context.globalState.update(KEY_INSTALLED_BEFORE, false);
         });
+    } else if (!context.globalState.get<boolean>(KEY_WELCOMED)) {
+      // Première utilisation : rien ne se passe sans action explicite, on l'explique.
+      void context.globalState.update(KEY_WELCOMED, true);
+      void vscode.window
+        .showInformationMessage(
+          "Cyberpunk Spider est installée. Pour afficher l'araignée, VS Code doit être modifié une fois (puis rechargé).",
+          'Installer maintenant',
+          'Lire le guide',
+        )
+        .then(async (pick) => {
+          if (pick === 'Installer maintenant') await install();
+          else if (pick === 'Lire le guide') void vscode.env.openExternal(vscode.Uri.parse(GUIDE_URL));
+        });
     }
   } catch {
-    /* droits insuffisants au démarrage : on reste silencieux */
+    /* droits insuffisants au démarrage : on reste silencieux, la commande Installer expliquera */
   }
   refreshStatus();
 }
 
 export function deactivate(): void {}
-
-function showFsError(e: unknown, action: string): void {
-  const err = e as NodeJS.ErrnoException;
-  if (err.code === 'EACCES' || err.code === 'EPERM') {
-    const hint =
-      process.platform === 'win32'
-        ? 'Relancez VS Code en administrateur (ou utilisez l\'installation « utilisateur »).'
-        : process.platform === 'darwin'
-          ? 'Donnez-vous les droits : sudo chown -R "$(whoami)" "<dossier VS Code>/Contents/Resources/app/out".'
-          : 'Donnez-vous les droits : sudo chown -R "$(whoami)" "<dossier VS Code>/resources/app/out".';
-    void vscode.window.showErrorMessage(`Impossible de ${action} : droits insuffisants sur VS Code. ${hint}`);
-  } else {
-    void vscode.window.showErrorMessage(`Impossible de ${action} : ${err.message}`);
-  }
-}

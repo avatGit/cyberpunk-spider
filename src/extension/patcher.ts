@@ -49,8 +49,19 @@ export function replaceChecksum(productRaw: string, key: string, newHash: string
   return productRaw.replace(re, `$1${newHash}$2`);
 }
 
-export function configFileContent(cfg: SpiderConfig): string {
-  return `window.${CONFIG_GLOBAL}=${JSON.stringify(cfg)};\n`;
+/** `alive` : horodatage de « signe de vie » de l'extension, lu par le runtime pour s'arrêter si elle disparaît. */
+export function configPayload(cfg: SpiderConfig, alive: number = Date.now()): string {
+  return JSON.stringify({ ...cfg, alive });
+}
+
+export function configFileContent(cfg: SpiderConfig, alive: number = Date.now()): string {
+  return `window.${CONFIG_GLOBAL}=${configPayload(cfg, alive)};\n`;
+}
+
+/** Propriétaire à rétablir après une écriture en root (sudo), pour que l'extension puisse ensuite écrire seule. */
+export interface Owner {
+  uid: number;
+  gid: number;
 }
 
 // ---------- accès disque ----------
@@ -89,7 +100,17 @@ export class Patcher {
   constructor(
     private appRoot: string,
     private injectedSrc: string,
+    private owner?: Owner,
   ) {}
+
+  private own(file: string): void {
+    if (!this.owner) return;
+    try {
+      fs.chownSync(file, this.owner.uid, this.owner.gid);
+    } catch {
+      /* best effort */
+    }
+  }
 
   targets(): PatchPaths[] {
     return locateAll(this.appRoot);
@@ -120,8 +141,13 @@ export class Patcher {
   }
 
   private writeConfigIn(p: PatchPaths, cfg: SpiderConfig): void {
-    fs.writeFileSync(path.join(p.dir, ASSET_CONFIG), configFileContent(cfg), 'utf8');
-    fs.writeFileSync(path.join(p.dir, ASSET_CONFIG_JSON), JSON.stringify(cfg), 'utf8');
+    const js = path.join(p.dir, ASSET_CONFIG);
+    const json = path.join(p.dir, ASSET_CONFIG_JSON);
+    const alive = Date.now();
+    fs.writeFileSync(js, configFileContent(cfg, alive), 'utf8');
+    fs.writeFileSync(json, configPayload(cfg, alive), 'utf8');
+    this.own(js);
+    this.own(json);
   }
 
   install(cfg: SpiderConfig): { checksumUpdated: boolean } {
@@ -130,12 +156,22 @@ export class Patcher {
     let allSynced = true;
     for (const p of targets) {
       const original = fs.readFileSync(p.html, 'utf8');
-      if (!hasBlock(original)) fs.copyFileSync(p.html, p.html + '.cyberpunk-spider.bak');
+      if (!hasBlock(original)) {
+        fs.copyFileSync(p.html, p.html + '.cyberpunk-spider.bak');
+        this.own(p.html + '.cyberpunk-spider.bak');
+      }
       // Assets d'abord : on ne référence jamais un fichier absent.
-      fs.copyFileSync(this.injectedSrc, path.join(p.dir, ASSET_SCRIPT));
+      const script = path.join(p.dir, ASSET_SCRIPT);
+      fs.copyFileSync(this.injectedSrc, script);
+      this.own(script);
       this.writeConfigIn(p, cfg);
       fs.writeFileSync(p.html, injectBlock(original), 'utf8');
       allSynced = this.syncChecksum(p) && allSynced;
+      // Après un sudo : le dossier, workbench.html et product.json deviennent modifiables par l'utilisateur,
+      // pour que mises à jour, réglages et désinstallation n'aient plus besoin de droits root.
+      this.own(p.html);
+      this.own(p.dir);
+      this.own(p.product);
     }
     return { checksumUpdated: allSynced };
   }
@@ -145,7 +181,10 @@ export class Patcher {
       const html = fs.readFileSync(p.html, 'utf8');
       if (hasBlock(html)) fs.writeFileSync(p.html, removeBlock(html), 'utf8');
       this.syncChecksum(p);
-      for (const f of [ASSET_SCRIPT, ASSET_CONFIG, ASSET_CONFIG_JSON]) {
+      this.own(p.html);
+      this.own(p.product);
+      // Le .bak ne sert qu'à la sécurité pendant l'installation : après restauration exacte, il serait périmé.
+      for (const f of [ASSET_SCRIPT, ASSET_CONFIG, ASSET_CONFIG_JSON, path.basename(p.html) + '.cyberpunk-spider.bak']) {
         try {
           fs.unlinkSync(path.join(p.dir, f));
         } catch {

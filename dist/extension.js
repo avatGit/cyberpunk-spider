@@ -119,8 +119,11 @@ function replaceChecksum(productRaw, key, newHash) {
   if (!re.test(productRaw)) return null;
   return productRaw.replace(re, `$1${newHash}$2`);
 }
-function configFileContent(cfg) {
-  return `window.${CONFIG_GLOBAL}=${JSON.stringify(cfg)};
+function configPayload(cfg, alive = Date.now()) {
+  return JSON.stringify({ ...cfg, alive });
+}
+function configFileContent(cfg, alive = Date.now()) {
+  return `window.${CONFIG_GLOBAL}=${configPayload(cfg, alive)};
 `;
 }
 var HTML_CANDIDATES = [
@@ -143,9 +146,17 @@ function locateAll(appRoot) {
 }
 var Patcher = class {
   /** `injectedSrc` : chemin du bundle dist/injected.js (vide pour une simple désinstallation). */
-  constructor(appRoot, injectedSrc) {
+  constructor(appRoot, injectedSrc, owner) {
     this.appRoot = appRoot;
     this.injectedSrc = injectedSrc;
+    this.owner = owner;
+  }
+  own(file) {
+    if (!this.owner) return;
+    try {
+      fs.chownSync(file, this.owner.uid, this.owner.gid);
+    } catch {
+    }
   }
   targets() {
     return locateAll(this.appRoot);
@@ -172,8 +183,13 @@ var Patcher = class {
     for (const p of this.targets()) this.writeConfigIn(p, cfg);
   }
   writeConfigIn(p, cfg) {
-    fs.writeFileSync(path.join(p.dir, ASSET_CONFIG), configFileContent(cfg), "utf8");
-    fs.writeFileSync(path.join(p.dir, ASSET_CONFIG_JSON), JSON.stringify(cfg), "utf8");
+    const js = path.join(p.dir, ASSET_CONFIG);
+    const json = path.join(p.dir, ASSET_CONFIG_JSON);
+    const alive = Date.now();
+    fs.writeFileSync(js, configFileContent(cfg, alive), "utf8");
+    fs.writeFileSync(json, configPayload(cfg, alive), "utf8");
+    this.own(js);
+    this.own(json);
   }
   install(cfg) {
     const targets = this.targets();
@@ -181,11 +197,19 @@ var Patcher = class {
     let allSynced = true;
     for (const p of targets) {
       const original = fs.readFileSync(p.html, "utf8");
-      if (!hasBlock(original)) fs.copyFileSync(p.html, p.html + ".cyberpunk-spider.bak");
-      fs.copyFileSync(this.injectedSrc, path.join(p.dir, ASSET_SCRIPT));
+      if (!hasBlock(original)) {
+        fs.copyFileSync(p.html, p.html + ".cyberpunk-spider.bak");
+        this.own(p.html + ".cyberpunk-spider.bak");
+      }
+      const script = path.join(p.dir, ASSET_SCRIPT);
+      fs.copyFileSync(this.injectedSrc, script);
+      this.own(script);
       this.writeConfigIn(p, cfg);
       fs.writeFileSync(p.html, injectBlock(original), "utf8");
       allSynced = this.syncChecksum(p) && allSynced;
+      this.own(p.html);
+      this.own(p.dir);
+      this.own(p.product);
     }
     return { checksumUpdated: allSynced };
   }
@@ -194,7 +218,9 @@ var Patcher = class {
       const html = fs.readFileSync(p.html, "utf8");
       if (hasBlock(html)) fs.writeFileSync(p.html, removeBlock(html), "utf8");
       this.syncChecksum(p);
-      for (const f of [ASSET_SCRIPT, ASSET_CONFIG, ASSET_CONFIG_JSON]) {
+      this.own(p.html);
+      this.own(p.product);
+      for (const f of [ASSET_SCRIPT, ASSET_CONFIG, ASSET_CONFIG_JSON, path.basename(p.html) + ".cyberpunk-spider.bak"]) {
         try {
           fs.unlinkSync(path.join(p.dir, f));
         } catch {
@@ -450,22 +476,87 @@ send({ type: 'ready' });
   );
 }
 
+// src/extension/elevate.ts
+function shQuote(s) {
+  return `'${s.replace(/'/g, `'\\''`)}'`;
+}
+function buildSudoCommand(i) {
+  const parts = ["sudo", "env", "ELECTRON_RUN_AS_NODE=1", shQuote(i.execPath), shQuote(i.cliPath), i.kind, "--app-root", shQuote(i.appRoot)];
+  if (i.kind === "install") {
+    parts.push("--src", shQuote(i.injectedPath), "--config-b64", Buffer.from(JSON.stringify(i.cfg)).toString("base64"));
+  }
+  return parts.join(" ");
+}
+
 // src/extension/extension.ts
 var KEY_INSTALLED_BEFORE = "cyberpunkSpider.installedBefore";
+var KEY_WELCOMED = "cyberpunkSpider.welcomed";
+var GUIDE_URL = "https://github.com/avatGit/cyberpunk-spider#installation-par-syst\xE8me";
+var HEARTBEAT_MS = 2 * 60 * 1e3;
 function activate(context) {
-  const patcher = new Patcher(vscode3.env.appRoot, path2.join(context.extensionPath, "dist", "injected.js"));
+  const distDir = path2.join(context.extensionPath, "dist");
+  const injectedPath = path2.join(distDir, "injected.js");
+  const patcher = new Patcher(vscode3.env.appRoot, injectedPath);
   const status = vscode3.window.createStatusBarItem(vscode3.StatusBarAlignment.Right, 0);
   status.command = "cyberpunkSpider.toggle";
   context.subscriptions.push(status);
   const refreshStatus = () => {
-    const on = patcher.isInstalled() && readConfig().enabled;
-    status.text = on ? "$(bug) Spider" : "$(bug) Spider (off)";
-    status.tooltip = "Cyberpunk Spider \u2014 cliquer pour activer/d\xE9sactiver";
+    const installed = patcher.isInstalled();
+    if (!installed) {
+      status.text = "$(bug) Spider : \xE0 installer";
+      status.tooltip = "L'araign\xE9e n'est pas encore install\xE9e dans VS Code \u2014 cliquer pour l'installer";
+      status.backgroundColor = new vscode3.ThemeColor("statusBarItem.warningBackground");
+    } else {
+      status.text = readConfig().enabled ? "$(bug) Spider" : "$(bug) Spider (off)";
+      status.tooltip = "Cyberpunk Spider \u2014 cliquer pour activer/d\xE9sactiver";
+      status.backgroundColor = void 0;
+    }
     status.show();
   };
   async function reloadPrompt(message) {
     const pick = await vscode3.window.showInformationMessage(message, "Recharger la fen\xEAtre");
     if (pick) await vscode3.commands.executeCommand("workbench.action.reloadWindow");
+  }
+  async function handleFsError(e, kind) {
+    const err = e;
+    const verb = kind === "install" ? "installer l'araign\xE9e" : "retirer le patch";
+    if (err.code !== "EACCES" && err.code !== "EPERM") {
+      void vscode3.window.showErrorMessage(`Impossible de ${verb} : ${err.message}`);
+      return;
+    }
+    if (process.platform === "win32") {
+      const pick2 = await vscode3.window.showErrorMessage(
+        `Impossible de ${verb} : VS Code est install\xE9 dans un dossier prot\xE9g\xE9. Fermez VS Code, relancez-le en tant qu'administrateur, puis r\xE9essayez (ou utilisez l'installeur \xAB User \xBB de VS Code).`,
+        "Ouvrir le guide"
+      );
+      if (pick2) void vscode3.env.openExternal(vscode3.Uri.parse(GUIDE_URL));
+      return;
+    }
+    const pick = await vscode3.window.showWarningMessage(
+      `Impossible de ${verb} : VS Code est install\xE9 dans un dossier prot\xE9g\xE9 (${vscode3.env.appRoot}). Il faut des droits administrateur une seule fois ; ensuite tout fonctionne sans.`,
+      "Ouvrir un terminal avec sudo",
+      "Ouvrir le guide"
+    );
+    if (pick === "Ouvrir le guide") void vscode3.env.openExternal(vscode3.Uri.parse(GUIDE_URL));
+    if (pick === "Ouvrir un terminal avec sudo") {
+      const cmd = buildSudoCommand({
+        kind,
+        execPath: process.execPath,
+        cliPath: path2.join(distDir, "cli.js"),
+        appRoot: vscode3.env.appRoot,
+        injectedPath,
+        cfg: readConfig()
+      });
+      const term = vscode3.window.createTerminal("Cyberpunk Spider (sudo)");
+      term.show();
+      term.sendText(cmd, true);
+      void vscode3.window.showInformationMessage(
+        "Saisissez votre mot de passe dans le terminal. Quand \xAB OK \xBB s\u2019affiche, rechargez la fen\xEAtre.",
+        "Recharger la fen\xEAtre"
+      ).then((p) => {
+        if (p) void vscode3.commands.executeCommand("workbench.action.reloadWindow");
+      });
+    }
   }
   async function install() {
     try {
@@ -475,7 +566,7 @@ function activate(context) {
       const extra = checksumUpdated ? "" : " (checksum non mis \xE0 jour : un avertissement \xAB installation corrompue \xBB peut appara\xEEtre.)";
       await reloadPrompt(`Araign\xE9e install\xE9e${extra} Rechargez la fen\xEAtre pour la voir.`);
     } catch (e) {
-      showFsError(e, "installer");
+      await handleFsError(e, "install");
     }
   }
   async function uninstall() {
@@ -485,7 +576,7 @@ function activate(context) {
       refreshStatus();
       await reloadPrompt("Patch retir\xE9. Rechargez la fen\xEAtre pour restaurer VS Code.");
     } catch (e) {
-      showFsError(e, "d\xE9sinstaller");
+      await handleFsError(e, "uninstall");
     }
   }
   context.subscriptions.push(
@@ -493,11 +584,7 @@ function activate(context) {
     vscode3.commands.registerCommand("cyberpunkSpider.disable", uninstall),
     vscode3.commands.registerCommand("cyberpunkSpider.toggle", async () => {
       if (!patcher.isInstalled()) {
-        const pick = await vscode3.window.showInformationMessage(
-          "L'araign\xE9e n'est pas encore install\xE9e dans VS Code.",
-          "Installer"
-        );
-        if (pick) await install();
+        await install();
         return;
       }
       const cfg = vscode3.workspace.getConfiguration(SECTION);
@@ -516,15 +603,23 @@ function activate(context) {
       if (!e.affectsConfiguration(SECTION)) return;
       try {
         if (patcher.isInstalled()) patcher.writeConfig(readConfig());
-      } catch (err) {
-        showFsError(err, "\xE9crire la configuration");
+      } catch {
       }
       refreshStatus();
     })
   );
+  const beat = () => {
+    try {
+      if (patcher.isInstalled()) patcher.writeConfig(readConfig());
+    } catch {
+    }
+  };
+  const timer = setInterval(beat, HEARTBEAT_MS);
+  context.subscriptions.push({ dispose: () => clearInterval(timer) });
   try {
     if (patcher.isInstalled()) {
       if (!patcher.isUpToDate()) patcher.install(readConfig());
+      else beat();
     } else if (context.globalState.get(KEY_INSTALLED_BEFORE)) {
       void vscode3.window.showWarningMessage(
         "VS Code a probablement \xE9t\xE9 mis \xE0 jour : le patch de Cyberpunk Spider a disparu.",
@@ -534,21 +629,22 @@ function activate(context) {
         if (pick === "R\xE9appliquer") await install();
         else if (pick) await context.globalState.update(KEY_INSTALLED_BEFORE, false);
       });
+    } else if (!context.globalState.get(KEY_WELCOMED)) {
+      void context.globalState.update(KEY_WELCOMED, true);
+      void vscode3.window.showInformationMessage(
+        "Cyberpunk Spider est install\xE9e. Pour afficher l'araign\xE9e, VS Code doit \xEAtre modifi\xE9 une fois (puis recharg\xE9).",
+        "Installer maintenant",
+        "Lire le guide"
+      ).then(async (pick) => {
+        if (pick === "Installer maintenant") await install();
+        else if (pick === "Lire le guide") void vscode3.env.openExternal(vscode3.Uri.parse(GUIDE_URL));
+      });
     }
   } catch {
   }
   refreshStatus();
 }
 function deactivate() {
-}
-function showFsError(e, action) {
-  const err = e;
-  if (err.code === "EACCES" || err.code === "EPERM") {
-    const hint = process.platform === "win32" ? "Relancez VS Code en administrateur (ou utilisez l'installation \xAB utilisateur \xBB)." : process.platform === "darwin" ? 'Donnez-vous les droits : sudo chown -R "$(whoami)" "<dossier VS Code>/Contents/Resources/app/out".' : 'Donnez-vous les droits : sudo chown -R "$(whoami)" "<dossier VS Code>/resources/app/out".';
-    void vscode3.window.showErrorMessage(`Impossible de ${action} : droits insuffisants sur VS Code. ${hint}`);
-  } else {
-    void vscode3.window.showErrorMessage(`Impossible de ${action} : ${err.message}`);
-  }
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {

@@ -6,6 +6,7 @@ import { PaletteCycler, css, mixRgb, RGB } from './color';
 import { ActivityTracker, scanErrors, caretPos, ErrorInfo } from './detect';
 import { Vec } from './math';
 import { rand } from './math';
+import { extensionAlive } from './alive';
 
 const win = window as any;
 const ALERT: RGB = [255, 51, 85];
@@ -16,6 +17,9 @@ function boot(): void {
   // Config de boot posée par la balise <script> statique qui précède le runtime.
   let cfg: SpiderConfig = sanitizeConfig(win[CONFIG_GLOBAL]);
   let pollFails = 0;
+  const bootAt = Date.now();
+  const bootAlive = (win[CONFIG_GLOBAL] as { alive?: unknown } | undefined)?.alive;
+  let alive: number | null = typeof bootAlive === 'number' ? bootAlive : null;
   const palette = new PaletteCycler();
   palette.setPalette(cfg.palette);
   const activity = new ActivityTracker();
@@ -112,7 +116,8 @@ function boot(): void {
   function applyConfig(next: SpiderConfig): void {
     cfg = next;
     palette.setPalette(cfg.palette);
-    if (cfg.enabled) start();
+    // Désinstallée/désactivée mais patch encore présent : l'araignée s'arrête d'elle-même.
+    if (cfg.enabled && extensionAlive(Date.now(), bootAt, alive, pollFails < 4)) start();
     else stop();
   }
 
@@ -128,6 +133,7 @@ function boot(): void {
       })
       .then((j) => {
         pollFails = 0;
+        if (typeof j?.alive === 'number') alive = j.alive;
         applyConfig(sanitizeConfig(j));
       })
       .catch(() => {
